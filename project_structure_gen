@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# project_tree.sh - A script to print out project structure
+
+# Set default values
+MAX_DEPTH=9
+DIRECTORY="."
+SHOW_HIDDEN=0
+IGNORE_PATTERNS=("node_modules" ".git" "__pycache__" "venv" ".env")
+
+# Function to print help message
+print_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo "Print out the structure of your project directory."
+    echo
+    echo "Options:"
+    echo "  -d, --directory DIR   Specify the root directory (default: current directory)"
+    echo "  -m, --max-depth NUM   Maximum depth to traverse (default: 3)"
+    echo "  -a, --all             Include hidden files and directories"
+    echo "  -h, --help            Display this help message and exit"
+    echo
+    echo "Example:"
+    echo "  $0 -d ~/projects/myapp -m 4 -a"
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -d|--directory)
+            DIRECTORY="$2"
+            shift 2
+            ;;
+        -m|--max-depth)
+            MAX_DEPTH="$2"
+            shift 2
+            ;;
+        -a|--all)
+            SHOW_HIDDEN=1
+            shift
+            ;;
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            print_help
+            exit 1
+            ;;
+    esac
+done
+
+# Verify that the directory exists
+if [ ! -d "$DIRECTORY" ]; then
+    echo "Error: Directory '$DIRECTORY' does not exist or is not accessible."
+    exit 1
+fi
+
+# Convert to absolute path
+DIRECTORY=$(cd "$DIRECTORY" && pwd)
+echo "Project structure for: $DIRECTORY (max depth: $MAX_DEPTH)"
+echo "----------------------------------------"
+
+# Build the find command with proper exclusions
+FIND_CMD="find \"$DIRECTORY\" -type d -not -path \"*/\\.*\""
+
+# Add ignore patterns to find command
+for pattern in "${IGNORE_PATTERNS[@]}"; do
+    FIND_CMD="$FIND_CMD -not -path \"*/$pattern/*\""
+done
+
+# If showing hidden files, modify the find command
+if [ "$SHOW_HIDDEN" -eq 1 ]; then
+    FIND_CMD="find \"$DIRECTORY\""
+    for pattern in "${IGNORE_PATTERNS[@]}"; do
+        FIND_CMD="$FIND_CMD -not -path \"*/$pattern/*\""
+    done
+fi
+
+# Add depth constraint
+FIND_CMD="$FIND_CMD -maxdepth $MAX_DEPTH"
+
+# Execute the find command and process the output
+eval "$FIND_CMD" | sort | while read -r dir; do
+    # Calculate the relative depth from the root directory
+    rel_path="${dir#$DIRECTORY}"
+    depth=$(echo "$rel_path" | tr -cd '/' | wc -c)
+    
+    # Print the directory name with proper indentation
+    indent=$(printf '%*s' "$((depth * 2))" '')
+    dir_name=$(basename "$dir")
+    
+    # Skip the root directory in the output
+    if [ "$dir" != "$DIRECTORY" ]; then
+        echo "${indent}├── $dir_name/"
+        
+        # Find and print files in this directory
+        if [ "$SHOW_HIDDEN" -eq 1 ]; then
+            file_cmd="find \"$dir\" -maxdepth 1 -type f | sort"
+        else
+            file_cmd="find \"$dir\" -maxdepth 1 -type f -not -path \"*/\\.*\" | sort"
+        fi
+        
+        eval "$file_cmd" | while read -r file; do
+            if [ -f "$file" ]; then
+                file_name=$(basename "$file")
+                echo "${indent}│   ├── $file_name"
+            fi
+        done
+    fi
+done
+
+echo "----------------------------------------"
+echo "Legend:"
+echo "  ├── Directory/"
+echo "  │   ├── File"
+echo
+echo "Note: Some directories might be excluded (${IGNORE_PATTERNS[*]})"

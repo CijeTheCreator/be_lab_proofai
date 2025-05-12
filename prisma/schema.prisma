@@ -1,0 +1,360 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String // Note: Store hashed passwords only
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User's published content
+  publishedAgents   Agent[]
+  publishedDatasets Dataset[]
+  publishedModels   Model[]
+
+  // User's starred content
+  starredAgents   StarredAgent[]
+  starredDatasets StarredDataset[]
+  starredModels   StarredModel[]
+
+  // User's sessions
+  sessions Session[]
+
+  // User's jobs
+  jobs Job[]
+}
+
+model Agent {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  version     String
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Creator relationship
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  // Agent files
+  files AgentFile[]
+
+  // Environment variables
+  envVars AgentEnvVar[]
+
+  // Tags
+  tags AgentTag[]
+
+  // Sessions
+  sessions Session[]
+
+  // Stars
+  stars StarredAgent[]
+
+  // Jobs related to this agent
+  jobs Job[]
+
+  @@index([creatorId])
+}
+
+model AgentFile {
+  id        String   @id @default(uuid())
+  filename  String
+  filepath  String
+  filesize  Int
+  mimetype  String
+  createdAt DateTime @default(now())
+
+  // Relationship to Agent
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+model AgentEnvVar {
+  id        String   @id @default(uuid())
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship to Agent
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, key])
+  @@index([agentId])
+}
+
+model AgentTag {
+  id   String @id @default(uuid())
+  name String
+
+  // Relationship to Agent
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, name])
+  @@index([agentId])
+}
+
+model StarredAgent {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Relationships
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agentId])
+  @@index([userId])
+  @@index([agentId])
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  // Relationships
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id])
+
+  // Session data
+  userVars    UserVariable[]
+  chatHistory ChatMessage[]
+
+  // Jobs related to this session (agent invocation jobs)
+  jobs Job[]
+
+  @@index([userId])
+  @@index([agentId])
+}
+
+model UserVariable {
+  id        String   @id @default(uuid())
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship to Session
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, key])
+  @@index([sessionId])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  role      String // 'user', 'agent', 'system'
+  content   String
+  timestamp DateTime @default(now())
+
+  // Relationship to Session
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model Dataset {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  version     String
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Creator relationship
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  // Dataset files
+  files DatasetFile[]
+
+  // Stars
+  stars StarredDataset[]
+
+  // Jobs related to this dataset
+  jobs Job[]
+
+  @@index([creatorId])
+}
+
+model DatasetFile {
+  id        String   @id @default(uuid())
+  filename  String
+  filepath  String
+  filesize  Int
+  mimetype  String
+  createdAt DateTime @default(now())
+
+  // Relationship to Dataset
+  datasetId String
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+}
+
+model StarredDataset {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Relationships
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  datasetId String
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, datasetId])
+  @@index([userId])
+  @@index([datasetId])
+}
+
+model Model {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  version     String
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Creator relationship
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  // Model files
+  files ModelFile[]
+
+  // Stars
+  stars StarredModel[]
+
+  // Jobs related to this model
+  jobs Job[]
+
+  @@index([creatorId])
+}
+
+model ModelFile {
+  id        String   @id @default(uuid())
+  filename  String
+  filepath  String
+  filesize  Int
+  mimetype  String
+  createdAt DateTime @default(now())
+
+  // Relationship to Model
+  modelId String
+  model   Model  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
+}
+
+model StarredModel {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Relationships
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelId String
+  model   Model  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, modelId])
+  @@index([userId])
+  @@index([modelId])
+}
+
+// Job system for tracking operations
+enum JobType {
+  AGENT_CREATE
+  AGENT_UPDATE
+  MODEL_CREATE
+  MODEL_UPDATE
+  DATASET_CREATE
+  DATASET_UPDATE
+  AGENT_INVOCATION
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  type          JobType
+  status        JobStatus @default(QUEUED)
+  progress      Float     @default(0) // 0-100%
+  statusMessage String?
+  errorMessage  String?
+  createdAt     DateTime  @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  // User who initiated the job
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Related resources (only one will be populated based on job type)
+  agentId   String?
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+  datasetId String?
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  modelId   String?
+  model     Model?   @relation(fields: [modelId], references: [id])
+
+  // For AGENT_INVOCATION jobs, link to the session
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
+
+  // Logs for the job
+  logs JobLog[]
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([datasetId])
+  @@index([modelId])
+  @@index([sessionId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model JobLog {
+  id        String   @id @default(uuid())
+  level     String // 'info', 'warning', 'error', etc.
+  message   String
+  timestamp DateTime @default(now())
+
+  // Relationship to Job
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([timestamp])
+}
