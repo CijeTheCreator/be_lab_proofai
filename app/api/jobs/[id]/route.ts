@@ -1,10 +1,7 @@
 // app/api/jobs/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { checkJobStatus } from "@/actions/agent";
 import { auth } from "@/lib/auth"; // Import your authentication helper
-
-const prisma = new PrismaClient();
 
 /**
  * GET /api/jobs/[id] - Get job status

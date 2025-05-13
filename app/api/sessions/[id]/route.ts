@@ -83,10 +83,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Check if user owns this session
-    if (userSession.userId !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    //TODO: Suspending Auth for now
+    // // Check if user owns this session
+    // if (userSession.userId !== session.user.id) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // }
 
     // Update session (currently just supports ending it)
     const updatedSession = await prisma.session.update({
@@ -114,10 +115,11 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    //TODO: Suspending Auth for now
+    // const session = await getServerSession(authOptions);
+    // if (!session || !session.user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
     const sessionId = params.id;
 
@@ -132,10 +134,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Check if user owns this session
-    if (userSession.userId !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    //TODO: Suspending Auth for now
+    // // Check if user owns this session
+    // if (userSession.userId !== session.user.id) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // }
 
     // Delete session and all related records (cascades via schema)
     await prisma.session.delete({

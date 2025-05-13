@@ -1,3 +1,6 @@
+Given that I am running the server on localhost:3000, generate curl commands to test the following nextjs routes
+
+```ts
 // app/api/agents/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createJob, fetchAgentById } from "@/actions/agent";
@@ -231,3 +234,4 @@ export async function DELETE(
     );
   }
 }
+```

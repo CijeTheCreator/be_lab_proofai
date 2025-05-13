@@ -1,8 +1,8 @@
 // File: app/api/sessions/[id]/messages/bulk/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+// import { getServerSession } from "next-auth/next";
+// import { authOptions } from "@/lib/auth";
 
 // Add multiple chat messages to a session at once
 export async function POST(
@@ -10,10 +10,11 @@ export async function POST(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    //TODO: Suspending Auth for now
+    // const session = await getServerSession(authOptions);
+    // if (!session || !session.user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
     const sessionId = params.id;
     const { messages } = await req.json();
@@ -53,10 +54,11 @@ export async function POST(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Check if user owns this session
-    if (userSession.userId !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    //TODO: Suspending Auth for now
+    // // Check if user owns this session
+    // if (userSession.userId !== session.user.id) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // }
 
     // Check if session is already ended
     if (userSession.endedAt) {

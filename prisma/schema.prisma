@@ -1,4 +1,4 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file with Clerk integration
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -10,11 +10,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id        String   @id @default(uuid())
+  clerkId   String   @unique // Add Clerk's user ID for mapping
   name      String
   email     String   @unique
-  password  String // Note: Store hashed passwords only
+  imageUrl  String? // Profile picture from Clerk
+  role      UserRole @default(USER) // For permissions
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -33,6 +40,24 @@ model User {
 
   // User's jobs
   jobs Job[]
+
+  // User's profile
+  profile Profile?
+}
+
+// User profile for additional information
+model Profile {
+  id          String   @id @default(uuid())
+  bio         String?
+  location    String?
+  website     String?
+  companyName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relation to User
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Agent {

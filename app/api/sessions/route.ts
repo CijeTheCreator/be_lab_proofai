@@ -1,14 +1,21 @@
 // File: app/api/sessions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+// import { getServerSession } from "next-auth/next";
+// import { authOptions } from "@/lib/auth";
 
 // Create a new session
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    //TODO: Suspending Auth for now
+    // const session = await getServerSession(authOptions);
+    // if (!session || !session.user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+    //
+    const user = await auth();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,9 +38,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Create new session
+    // const newSession = await prisma.session.create({
+    //   data: {
+    //     userId: session.user.id,
+    //     agentId: agentId,
+    //   },
+    // });
+    //
     const newSession = await prisma.session.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         agentId: agentId,
       },
     });
@@ -51,8 +65,14 @@ export async function POST(req: NextRequest) {
 // Get all sessions for current user
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    //TODO: Suspending Auth for now
+    // const session = await getServerSession(authOptions);
+    // if (!session || !session.user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+    //
+    const user = await auth();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -64,8 +84,12 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
+    // const where: any = {
+    //   userId: session.user.id,
+    // };
+
     const where: any = {
-      userId: session.user.id,
+      userId: user.id,
     };
 
     if (agentId) {

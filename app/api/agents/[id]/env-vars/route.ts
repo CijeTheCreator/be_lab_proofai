@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setAgentEnvVar } from "@/actions/agent";
 import { auth } from "@/lib/auth"; // Import your authentication helper
+import { prisma } from "@/lib/prisma";
 
 /**
  * POST /api/agents/[id]/env-vars - Set an environment variable for an agent
@@ -73,7 +74,6 @@ export async function DELETE(
     }
 
     // Check if the agent exists and belongs to the user
-    const prisma = new PrismaClient();
     const agent = await prisma.agent.findUnique({
       where: {
         id: agentId,

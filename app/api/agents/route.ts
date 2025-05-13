@@ -1,11 +1,8 @@
 // app/api/agents/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { createJob } from "@/actions/agent";
-import { auth } from "@/lib/auth"; // Import your authentication helper
-import { v4 as uuidv4 } from "uuid"; // You might need to install this package
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
 const FLASK_SERVER_URL =
   process.env.FLASK_SERVER_URL || "http://localhost:5000";
 
@@ -14,12 +11,6 @@ const FLASK_SERVER_URL =
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const user = await auth();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get("query") || undefined;
@@ -99,8 +90,19 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    //TODO: Suspending Auth for now
     // Verify authentication
-    const user = await auth();
+    // const user = await auth();
+    // if (!user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+
+    //FIX: User for testing
+    const user = await prisma.user.findUnique({
+      where: {
+        id: "827a2a72-ffc2-443b-ae91-f6ea1b7f1b33",
+      },
+    });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

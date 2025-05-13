@@ -1,10 +1,9 @@
 // app/api/agents/[id]/invoke/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { createJob } from "@/actions/agent";
 import { auth } from "@/lib/auth"; // Import your authentication helper
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
 const FLASK_SERVER_URL =
   process.env.FLASK_SERVER_URL || "http://localhost:5000";
 
