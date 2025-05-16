@@ -1,8 +1,9 @@
 // app/api/agents/[id]/invoke/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createJob } from "@/actions/agent";
-import { auth } from "@/lib/auth"; // Import your authentication helper
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import axios from "axios";
 
 const FLASK_SERVER_URL =
   process.env.FLASK_SERVER_URL || "http://localhost:5000";
@@ -33,7 +34,7 @@ export async function POST(
     }
 
     // Parse the request body
-    const { prompt } = await request.json();
+    const { prompt, sessionId } = await request.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -42,19 +43,53 @@ export async function POST(
       );
     }
 
-    // Create a new session for this invocation
-    const session = await prisma.session.create({
-      data: {
-        userId: user.id,
-        agentId: agentId,
-        chatHistory: {
-          create: {
-            role: "user",
-            content: prompt,
+    let session;
+
+    // Check if sessionId was provided
+    if (sessionId) {
+      // Verify session exists and belongs to this user
+      const existingSession = await prisma.session.findUnique({
+        where: {
+          id: sessionId,
+          userId: user.id,
+          agentId: agentId,
+        },
+      });
+
+      if (!existingSession) {
+        return NextResponse.json(
+          { error: "Session not found or unauthorized" },
+          { status: 404 },
+        );
+      }
+
+      // Use existing session and add new message to chat history
+      session = await prisma.session.update({
+        where: { id: sessionId },
+        data: {
+          chatHistory: {
+            create: {
+              role: "user",
+              content: prompt,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // Create a new session for this invocation
+      session = await prisma.session.create({
+        data: {
+          userId: user.id,
+          agentId: agentId,
+          chatHistory: {
+            create: {
+              role: "user",
+              content: prompt,
+            },
+          },
+        },
+      });
+    }
 
     // Create a job for this agent invocation
     const jobResult = await createJob(
@@ -65,48 +100,64 @@ export async function POST(
     );
 
     if ("error" in jobResult) {
-      // Clean up the session if job creation fails
-      await prisma.session.delete({ where: { id: session.id } });
+      // Only clean up if we created a new session
+      if (!sessionId) {
+        await prisma.session.delete({ where: { id: session.id } });
+      }
       return NextResponse.json({ error: jobResult.error }, { status: 500 });
     }
 
     // This endpoint is unimplemented as per requirements
     // In a real implementation, you would forward the request to the Flask server for processing
-    // The code below is just a placeholder for future implementation
 
-    /*
-    // Send to Flask server
-    const flaskResponse = await fetch(`${FLASK_SERVER_URL}/api/agents/${agentId}/invoke`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sessionId: session.id,
-        jobId: jobResult.jobId,
-        userId: user.id,
-        prompt: prompt,
-      }),
-    });
+    try {
+      // Send to Flask server using Axios
+      const flaskResponse = await axios.post(
+        `${FLASK_SERVER_URL}/api/agents/${agentId}/invoke`,
+        {
+          sessionId: session.id,
+          jobId: jobResult.jobId,
+          userId: user.id,
+          prompt: prompt,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
-    if (!flaskResponse.ok) {
-      const errorData = await flaskResponse.json();
-      
-      // Clean up if Flask server rejects the request
-      await prisma.session.delete({ where: { id: session.id } });
+      // Axios automatically throws for non-2xx responses, so if we get here, it was successful
+    } catch (error) {
+      // Handle Axios errors
+      const errorData =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : { message: "Unknown error occurred" };
+
+      const statusCode =
+        axios.isAxiosError(error) && error.response?.status
+          ? error.response.status
+          : 500;
+
+      // Clean up if Flask server rejects the request, but only for new sessions
+      if (!sessionId) {
+        await prisma.session.delete({ where: { id: session.id } });
+      }
       await prisma.job.delete({ where: { id: jobResult.jobId } });
-      
+
       return NextResponse.json(
-        { error: 'Flask server rejected the request', details: errorData },
-        { status: flaskResponse.status }
+        { error: "Flask server rejected the request", details: errorData },
+        { status: statusCode },
       );
     }
-    */
 
     // Return success with job ID and session ID for tracking
     return NextResponse.json({
       success: true,
-      message: "Agent invocation process started",
+      message: sessionId
+        ? "Continued agent conversation"
+        : "Started new agent conversation",
       agentId: agentId,
       sessionId: session.id,
       jobId: jobResult.jobId,

@@ -100,3 +100,23 @@ curl -X POST http://localhost:3000/api/sessions/18909934-e7a2-41f3-b2f5-42b5ebb7
 curl -X GET "http://localhost:3000/api/sessions/18909934-e7a2-41f3-b2f5-42b5ebb7d1c8/messages?limit=50&before=2efed444-c8c2-4373-abca-a8df86e9ce71"
 curl -X GET "http://localhost:3000/api/sessions/18909934-e7a2-41f3-b2f5-42b5ebb7d1c8/messages?limit=50"
 ```
+
+# POST request to invoke an agent with a new session
+
+curl -X POST http://localhost:3000/api/agents/{agentId}/invoke \
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer {your_token}" \
+ -d '{"prompt": "What is the weather like today?"}'
+
+# POST request to invoke an agent using an existing session
+
+curl -X POST http://localhost:3000/api/agents/912042b3-7913-412d-b04c-78593051c2fc/invoke \
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer {your_token}" \
+ -d '{"prompt": "Continue our conversation.", "sessionId": "18909934-e7a2-41f3-b2f5-42b5ebb7d1c8"}'
+
+# Piston
+
+curl -X POST http://localhost:2000/api/v2/packages \
+ -H "Content-Type: application/json" \
+ -d '{"language": "python", "version": "3.10.0"}'
